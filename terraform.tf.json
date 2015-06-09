@@ -1,0 +1,68 @@
+{
+    "provider": {
+        "google": {
+            "account_file": "${var.GOOGLE_ACCOUNT_FILE}",
+            "project": "${var.GOOGLE_PROJECT}",
+            "region": "us-central1"
+        }
+    },
+
+    "resource": {
+        "google_compute_instance": {
+            "etcd": {
+                "count": "${var.ETCD_COUNT}",
+                "depends_on": [
+                    "template_file.etcd_cloud_config"
+                ],
+                "disk": {
+                    "image": "coreos-beta-681-0-0-v20150527"
+                },
+                "machine_type": "n1-standard-1",
+                "metadata": {
+                    "cluster-size": "${var.ETCD_COUNT}",
+                    "user-data": "${template_file.etcd_cloud_config.rendered}"
+                },
+                "name": "etcd-${count.index+1}-${var.ETCD_COUNT}",
+                "network_interface": {
+                    "access_config": {},
+                    "network": "default"
+                },
+                "zone": "us-central1-a"
+            }
+        },
+        "template_file": {
+            "etcd_cloud_config": {
+                "depends_on": [
+                    "template_file.etcd_discovery_url"
+                ],
+                "filename": "etcd_cloud_config.yaml.tpl",
+                "vars": {
+                    "etcd_discovery_url": "${file(var.ETCD_DISCOVERY_URL_FILE)}",
+                    "size": "${var.ETCD_COUNT}"
+                }
+            },
+            "etcd_discovery_url": {
+                "filename": "/dev/null",
+                "provisioner": {
+                    "local-exec": {
+                        "command": "curl https://discovery.etcd.io/new?size=${var.ETCD_COUNT} > ${var.ETCD_DISCOVERY_URL_FILE}"
+                    }
+                },
+                "vars": {
+                    "size": "${var.ETCD_COUNT}"
+                }
+            }
+        }
+    },
+
+    "variable": {
+        "ETCD_COUNT": {
+            "default": 5
+        },
+        "ETCD_DISCOVERY_URL_FILE": {
+            "default": "etcd_discovery_url.txt"
+        },
+        "GOOGLE_ACCOUNT_FILE": {},
+        "GOOGLE_PROJECT": {}
+    }
+}
